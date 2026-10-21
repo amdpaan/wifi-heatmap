@@ -78,6 +78,86 @@ const fmt = {
 };
 function byId(id) { return S && S.places.find((p) => p.id === id); }
 
+// ---------- the antenna-bot: wifi-heatmap's own pixel mascot (16×22 grid). Letters are colours
+// (style.css .bot-*); 1-4 are the chest's signal bars. The base is always drawn; each layer only draws
+// the cells that differ from it ("z" paints over with the page colour), and CSS shows the layers for the mood.
+const BOT = [
+  "................",
+  ".......tt.......",
+  ".......tt.......",
+  ".......aa.......",
+  ".......aa.......",
+  "..oooooooooooo..",
+  "..obbbbbbbbbbo..",
+  "..obssssssssbo..",
+  "..obseesseesbo..",
+  ".dobseesseesbod.",
+  "..obssssssssbo..",
+  "..obssmmmmssbo..",
+  "..obbbbbbbbbbo..",
+  "..oooooooooooo..",
+  "......oddo......",
+  "...oooooooooo...",
+  "..dobbbbbbb4od..",
+  "..dobbbbb3b4od..",
+  "..oobbb2b3b4oo..",
+  "...ob1b2b3b4o...",
+  "...oooooooooo...",
+  "....ww....ww....",
+];
+const BOT_LAYERS = {
+  "happy": { 8: "..obsessssesbo..", 9: ".dobesessesebod.", 11: "..obsmmmmmmsbo.." },
+  "worried": { 7: "..obssssssssboq.", 8: "..obssssssssboq." },
+  "sad": { 9: ".dobssssssssbod.", 10: "..obssmmmmssbo..", 11: "..obsmssssmsbo.." },
+  "lids": { 8: "..obssssssssbo.." },   // worried and blinking eyes: only the bottom row
+  "sparks": { 0: "....y......y....", 1: "...y........y...", 3: "..y..........y.." },
+  "droop": { 1: ".......zz.......", 2: ".....aaaz.......", 3: "...tt.aaz.......", 4: "...tt..aa......." },
+};
+const MOODS = {   // face + antenna for each mood, and what it says
+  great: ["happy sparks", "sparking: a great spot"],
+  ok: ["", "content: an ok spot"],
+  poor: ["worried lids", "worried: a poor spot"],
+  dead: ["sad droop", "drooping: a dead zone"],
+  idle: ["", "waiting for some data"],
+};
+
+function drawBot() {
+  const svg = s("svg", { viewBox: "0 0 16 22", "shape-rendering": "crispEdges", "aria-hidden": "true" });
+  const cells = (rows, layer) => {
+    const g = s("g", layer ? { class: "layer " + layer } : {});
+    for (const [y, row] of Object.entries(rows)) {
+      [...row].forEach((c, x) => {
+        if (c === "." || (layer && BOT[y][x] === c)) return;
+        g.append(s("rect", { class: "bot-" + c, x, y, width: 1.02, height: 1.02 }));
+      });
+    }
+    return g;
+  };
+  svg.append(cells(BOT));
+  for (const [name, rows] of Object.entries(BOT_LAYERS)) svg.append(cells(rows, name));
+  $("bot").replaceChildren(svg);
+}
+
+/** mood: great/ok/poor/dead/idle; level: chest bars lit (0-4); logging: antenna blinks. */
+function setBot(mood, level, logging) {
+  const el = $("bot");
+  el.className = "bot m-" + mood + " lv-" + level + (logging ? " logging" : "") + " "
+    + MOODS[mood][0].split(" ").filter(Boolean).map((l) => "show-" + l).join(" ");
+  el.setAttribute("aria-label", "The antenna-bot, " + MOODS[mood][1] + (logging ? ", logging now" : ""));
+}
+
+function botMood() {
+  const lv = S.live && S.live.sample;
+  if (lv) {   // logging: the face and bars follow the live signal
+    const n = lv.connected ? rssiBars(lv.rssi) : 0;
+    return [["dead", "dead", "poor", "ok", "great"][n], n, true];
+  }
+  const top = S.places.find((p) => p.score != null);
+  if (!top) return ["idle", 0, !!S.live];
+  const k = KEY[top.label];
+  return [k, BARS[k], !!S.live];
+}
+
 // ---------- tooltip (enhances; every value is also in the table or the sheet)
 const tip = $("tip");
 function showTip(target, title, lines) {
@@ -103,6 +183,7 @@ function render() {
   const ranked = S.places.filter((p) => p.score != null);
   const best = S.best.map(byId), dead = S.dead.map(byId);
   $("eyebrow").textContent = S.demo ? "wifi-heatmap · demo" : "wifi-heatmap";
+  setBot(...botMood());
   $("headline").textContent = !S.places.length ? "No places yet"
     : best.length ? "Best spot: " + best[0].name
     : ranked.length ? "No great spot yet" : "Not enough data yet";
@@ -457,5 +538,6 @@ async function refresh() {
   timer = setTimeout(refresh, S && S.live ? 5000 : 30000);
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+drawBot();
 window.addEventListener("resize", hideTip);
 refresh();

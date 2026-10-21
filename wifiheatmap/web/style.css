@@ -20,6 +20,17 @@
   --dead: #d03b3b;
   --none: #9aa3a6;
 
+  /* the antenna-bot */
+  --bot-ink: #1c2124;
+  --bot-body: #a9bcc4;
+  --bot-shade: #7f959f;
+  --bot-screen: #22313a;
+  --bot-glow: #7ff0c8;
+  --bot-off: #6f858f;     /* an unlit chest bar */
+  --bot-feet: #39474e;
+  --bot-spark: #fab219;
+  --bot-sweat: #6da7ec;
+
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
   --radius: 14px;
@@ -30,14 +41,14 @@
   :root:not([data-theme="light"]) {
     --paper: #15191b; --surface: #1c2124; --surface-2: #262c2f; --ink: #e7ecea; --muted: #9aa4a7;
     --line: #313a3d; --btn: #e7ecea; --btn-text: #15191b; --focus: #6da7ec; --bar: #3987e5; --track: #2b3235;
-    --none: #6f797c;
+    --none: #6f797c; --bot-ink: #56656c; --bot-feet: #56656c;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #15191b; --surface: #1c2124; --surface-2: #262c2f; --ink: #e7ecea; --muted: #9aa4a7;
   --line: #313a3d; --btn: #e7ecea; --btn-text: #15191b; --focus: #6da7ec; --bar: #3987e5; --track: #2b3235;
-  --none: #6f797c;
+  --none: #6f797c; --bot-ink: #56656c; --bot-feet: #56656c;
   color-scheme: dark;
 }
 
@@ -75,6 +86,42 @@ h1 { margin: 0; font-size: 28px; line-height: 1.15; letter-spacing: -.01em; }
   box-shadow: inset 0 0 0 1px var(--line); display: grid; place-items: center;
 }
 .icon-btn svg { width: 18px; height: 18px; }
+
+/* ---------- the antenna-bot */
+.hero { display: flex; gap: 16px; align-items: flex-end; min-width: 0; }
+.bot { width: 64px; flex: none; display: block; }
+.bot svg { width: 100%; height: auto; display: block; overflow: visible; }
+.bot-o, .bot-a { fill: var(--bot-ink); }
+.bot-b { fill: var(--bot-body); }
+.bot-d { fill: var(--bot-shade); }
+.bot-s { fill: var(--bot-screen); }
+.bot-e, .bot-m { fill: var(--bot-glow); }
+.bot-w { fill: var(--bot-feet); }
+.bot-y { fill: var(--bot-spark); }
+.bot-q { fill: var(--bot-sweat); }
+.bot-z { fill: var(--paper); }
+.bot-1, .bot-2, .bot-3, .bot-4 { fill: var(--bot-off); }
+/* the antenna tip and lit bars wear the mood's status colour */
+.bot { --mood: var(--none); }
+.bot.m-great { --mood: var(--great); } .bot.m-ok { --mood: var(--ok); }
+.bot.m-poor { --mood: var(--poor); } .bot.m-dead { --mood: var(--dead); }
+.bot-t { fill: var(--mood); }
+.bot.lv-1 .bot-1, .bot.lv-2 .bot-1, .bot.lv-2 .bot-2, .bot.lv-3 .bot-1, .bot.lv-3 .bot-2, .bot.lv-3 .bot-3,
+.bot.lv-4 .bot-1, .bot.lv-4 .bot-2, .bot.lv-4 .bot-3, .bot.lv-4 .bot-4 { fill: var(--mood); }
+.bot .layer { opacity: 0; }
+.bot.show-happy .happy, .bot.show-worried .worried, .bot.show-sad .sad, .bot.show-lids .lids,
+.bot.show-sparks .sparks, .bot.show-droop .droop { opacity: 1; }
+.bot.m-dead .bot-t { fill: var(--bot-off); }   /* a dead zone's antenna light is out */
+@media (prefers-reduced-motion: no-preference) {
+  .bot.m-idle .lids, .bot.m-ok .lids { animation: blink 6s infinite; }
+  .bot.show-sparks .sparks { animation: spark 1.2s steps(2, end) infinite; }
+  .bot.logging .bot-t { animation: tip 1s steps(2, end) infinite; }
+  .bot.show-worried .worried .bot-q { animation: sweat 2.4s ease-in infinite; }
+}
+@keyframes blink { 0%, 95%, 100% { opacity: 0; } 96.5%, 98% { opacity: 1; } }
+@keyframes spark { 50% { opacity: .25; } }
+@keyframes tip { 50% { fill: var(--surface); } }
+@keyframes sweat { 0% { transform: translateY(0); opacity: 1; } 80% { transform: translateY(2px); opacity: 0; } 100% { opacity: 0; } }
 
 /* ---------- layout */
 main { max-width: 1080px; margin: 0 auto; padding: 12px 20px 48px; display: grid; gap: 16px; }
@@ -216,6 +263,8 @@ form.dlg .check { display: flex; gap: 8px; align-items: center; font-weight: 400
   .top { padding: 20px 16px 4px; }
   main { padding: 8px 16px 40px; }
   h1 { font-size: 23px; }
+  .bot { width: 48px; }
+  .hero { gap: 12px; }
   .panel { padding: 14px; }
   .table-wrap { margin: 0 -14px; padding: 0 14px; }
   .live { grid-template-columns: auto 1fr; }

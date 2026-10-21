@@ -10,21 +10,46 @@ Everything runs locally on your Mac. It only measures your own connection: it re
 pings a public host and runs an occasional short speed test. It never scans or captures anyone else's
 devices or traffic.
 
-**Status:** early. Logging, ranking and the map dashboard work; the mascot and an installer are next.
+![The dashboard: a campus map with a pin and a glow per place, coloured by score, and the rankings](docs/screenshots/dash-light.jpg)
+
+<p align="center">
+  <img src="docs/screenshots/detail.jpg" width="64%" alt="A place's sheet: score parts, stats, score by hour of day and recent visits">
+  <img src="docs/screenshots/phone.jpg" width="25%" alt="The dashboard on a phone, in dark mode">
+</p>
+
+<sub>Screenshots come from the built-in demo (`wifi-heatmap serve --demo`): a made-up campus with made-up
+measurements and fake access points.</sub>
+
+## Meet the antenna-bot
+
+wifi-heatmap's pixel mascot sits next to the headline. Its chest bars light up with the signal, and its
+antenna light takes the colour of the score: it sparks in a great spot, sweats in a poor one and droops in a
+dead zone. While you're logging, it follows your live signal and its antenna blinks.
+
+<p align="center"><img src="docs/screenshots/moods.png" width="560" alt="The antenna-bot's five moods: great spot, ok, poor, dead zone and no data yet"></p>
 
 ## Requirements
 
 - macOS 14 or later (tested on macOS 27, Apple Silicon)
 - Command Line Tools (`xcode-select --install`), which provide `swiftc` and `python3` (3.9+)
 
-## Try it
+## Install
 
 ```sh
 git clone https://github.com/amdpaan/wifi-heatmap ~/Projects/wifi-heatmap
 cd ~/Projects/wifi-heatmap
-tools/build-helper.sh                         # builds the Wi-Fi helper app (once, and after updates)
-bin/wifi-heatmap now                          # your Wi-Fi and ping right now; allow Location when asked
-bin/wifi-heatmap log --place "Library L2"     # check in and log every 5 s until Ctrl-C
+./install.sh              # links `wifi-heatmap` into ~/.local/bin and builds the Wi-Fi helper app
+./install.sh --agent      # also keeps the dashboard running from login (127.0.0.1 only)
+```
+
+Then run `wifi-heatmap now` once and allow Location Services when macOS asks (see
+[How it works](#how-it-works) for why). Re-run `./install.sh` after `git pull`. `./uninstall.sh` removes the
+command and the agent but keeps your data; `./uninstall.sh --purge` deletes that too.
+
+## Log a place
+
+```sh
+wifi-heatmap log --place "Library L2"     # check in and log every 5 s until Ctrl-C
 ```
 
 `log` runs one short speed test when you check in (about 10 s and 30 MB; skip it with `--no-speedtest`),
@@ -39,10 +64,9 @@ Speed: 48.2 Mbit/s down, 21.7 Mbit/s up, RTT 14.0 ms (10.2 s, ~31 MB)
 Library L2: 2 samples over 0m05s, median signal -62 dBm, median ping 20 ms, 0% loss
 ```
 
-Once a place has a minute of samples, `rank` scores it. `demo` shows the same ranking for made-up places:
+Once a place has a minute of samples, `wifi-heatmap rank` scores it:
 
 ```
-$ bin/wifi-heatmap demo
     Place                    Score             Signal   p90 ping   Loss     Download
  1. Library L2, window side     99  great      -53 dBm      21 ms     0%     67 Mbit/s
  2. Computer lab 3              96  great      -58 dBm      18 ms     0%     89 Mbit/s
@@ -56,16 +80,18 @@ Best study spots: Library L2, window side, Computer lab 3, Lecture hall A
 Dead zones: Library basement
 ```
 
+(That's `wifi-heatmap demo`, the same ranking for the made-up places.)
+
 ## Dashboard
 
 ```sh
-bin/wifi-heatmap serve           # opens http://127.0.0.1:8766/
-bin/wifi-heatmap serve --demo    # the same with a made-up campus (changes nothing)
-bin/wifi-heatmap serve --lan     # also from your phone on the same Wi-Fi, with a private link
+wifi-heatmap serve           # opens http://127.0.0.1:8766/
+wifi-heatmap serve --demo    # the same with a made-up campus (changes nothing)
+wifi-heatmap serve --lan     # also from your phone on the same Wi-Fi, with a private link
 ```
 
-- **Map:** upload a campus map or floor plan (PNG, JPEG or WebP) and drop a pin for each place. Each pin
-  shows the place's score, with a glow in its colour (great, ok, poor, dead zone).
+- **Map:** upload a campus map or floor plan (PNG, JPEG or WebP; a screenshot of a map app works) and drop a
+  pin for each place. Each pin shows the place's score, with a glow in its colour (great, ok, poor, dead zone).
 - **Rankings:** every place with its score, signal, p90 ping, loss, download and why it lost points.
 - **Place sheet:** click a place for its score parts, all its stats, its score by hour of the day (is the
   cafeteria slow at lunch?) and its recent visits. Rename it or move its pin from there.
@@ -77,8 +103,8 @@ token in the link it prints. The uploaded map stays in your data folder.
 
 ## More commands
 
-`speedtest [--place NAME]`, `place list`, `place add NAME`, `place rename OLD NEW`
-(renaming keeps the history).
+`now` (one reading, logs nothing), `speedtest [--place NAME]`, `place list`, `place add NAME`,
+`place rename OLD NEW` (renaming keeps the history). `wifi-heatmap --help` lists them all.
 
 ## How it works
 
@@ -97,16 +123,15 @@ token in the link it prints. The uploaded map stays in your data folder.
 
 ## Planned
 
-- An installer, and screenshots here.
-- An original pixel mascot, the antenna-bot, whose antenna bars show the signal.
 - A tile for [claude-widget](https://github.com/amdpaan/claude-widget).
 
-## Tests
+## Development
 
 ```sh
-/usr/bin/python3 -m unittest discover tests
+/usr/bin/python3 -m unittest discover tests   # tests (a fake Wi-Fi helper; no network needed)
+tools/screenshots.sh                          # regenerate docs/screenshots from the demo
 ```
 
 ## License
 
-MIT
+MIT. The antenna-bot is original pixel art made for this project.
