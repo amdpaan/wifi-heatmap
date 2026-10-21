@@ -1,0 +1,33 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Apple Silicon macOS, like the Macs this runs on: the helper is Swift + CoreWLAN.
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python and Swift versions
+        run: |
+          /usr/bin/python3 --version
+          swiftc --version
+
+      - name: Unit and end-to-end tests
+        # System Python (3.9 on most Macs), with a fake Wi-Fi helper and fake ping / speed test.
+        run: /usr/bin/python3 -m unittest discover -v tests
+
+      - name: The helper app builds and runs
+        # Runners have no Wi-Fi, so the helper should say so and still print valid JSON.
+        run: |
+          WIFI_HEATMAP_ADHOC=1 tools/build-helper.sh "$RUNNER_TEMP/wh"
+          "$RUNNER_TEMP/wh/WiFi Heatmap Helper.app/Contents/MacOS/wifi-heatmap-helper" --once | /usr/bin/python3 -m json.tool
+          for f in tools/build-helper.sh bin/wifi-heatmap; do sh -n "$f"; done

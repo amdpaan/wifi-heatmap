@@ -4,6 +4,7 @@ samples.jsonl
 places.json
 config.json
 summary.json
+wifi-latest.json
 maps/
 logs/
 *.local.json
