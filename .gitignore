@@ -1,0 +1,18 @@
+# Personal data: samples, places, map images and real BSSIDs. Normally lives in
+# ~/.wifi-heatmap, ignored here too in case WIFI_HEATMAP_HOME points inside the repo.
+samples.jsonl
+places.json
+config.json
+summary.json
+maps/
+logs/
+*.local.json
+
+# Built Swift helper
+build/
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.DS_Store
