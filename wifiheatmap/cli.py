@@ -8,7 +8,7 @@ import uuid
 from collections import Counter
 from datetime import datetime
 
-from . import measure, paths, places, samples, wifi
+from . import demo, measure, paths, places, samples, score, wifi
 
 
 class CliError(Exception):
@@ -166,6 +166,47 @@ def cmd_speedtest(a):
     return 0 if not s.get("error") else 1
 
 
+def print_rank(rows):
+    ranked = [r for r in rows if r["score"] is not None]
+    waiting = [r for r in rows if r["score"] is None and r["samples"]]
+    if not ranked:
+        print(f"Nothing ranked yet: a place needs {score.MIN_SAMPLES} samples (1 minute of logging).")
+    w = max([len(r["name"]) for r in ranked] + [5])
+    if ranked:
+        print(f"    {'Place':<{w}}  Score  {'':<9}  Signal   p90 ping   Loss     Download")
+    for i, r in enumerate(ranked, 1):
+        sig = f"{r['rssi']:.0f} dBm" if r["rssi"] is not None else "—"
+        p90 = f"{r['ping_p90']:.0f} ms" if r["ping_p90"] is not None else "—"
+        loss = f"{r['loss']:.0f}%" if r["loss"] is not None else "—"
+        dl = f"{r['dl_mbps']:.0f} Mbit/s" if r["dl_mbps"] is not None else "no test"
+        why = f"  ({r['why']})" if r["why"] else ""
+        print(f"{i:>2}. {r['name']:<{w}}  {r['score']:>5}  {r['label']:<9}  {sig:>7}  {p90:>9}  {loss:>5}   "
+              f"{dl:>11}{why}")
+    if waiting:
+        print(f"Not ranked yet (needs {score.MIN_SAMPLES} samples): "
+              + ", ".join(f"{r['name']} ({r['samples']})" for r in waiting))
+    good, bad = score.best(rows), score.dead(rows)
+    if good:
+        print("\nBest study spots: " + ", ".join(r["name"] for r in good))
+    if bad:
+        print("Dead zones: " + ", ".join(r["name"] for r in bad))
+
+
+def cmd_rank(a):
+    known = places.load()
+    if not known:
+        print("No places yet. Start with: wifi-heatmap log --place \"Library L2\"")
+        return 0
+    print_rank(score.summarize(known, samples.read()))
+    return 0
+
+
+def cmd_demo(a):
+    print("Made-up places and samples (nothing is saved):\n")
+    print_rank(score.summarize(*demo.generate()))
+    return 0
+
+
 def cmd_place(a):
     if a.action == "add":
         p = places.add(a.name)
@@ -208,6 +249,12 @@ def parser():
     s = sub.add_parser("speedtest", help="run one capped speed test (~10 s, ~30 MB)")
     s.add_argument("--place", help="also log it for this place")
     s.set_defaults(fn=cmd_speedtest)
+
+    s = sub.add_parser("rank", help="score your places: best study spots and dead zones")
+    s.set_defaults(fn=cmd_rank)
+
+    s = sub.add_parser("demo", help="the ranking for made-up places (saves nothing)")
+    s.set_defaults(fn=cmd_demo)
 
     s = sub.add_parser("place", help="list, add or rename places")
     s.add_argument("action", nargs="?", default="list", choices=("list", "add", "rename"))

@@ -10,7 +10,7 @@ Everything runs locally on your Mac. It only measures your own connection: it re
 pings a public host and runs an occasional short speed test. It never scans or captures anyone else's
 devices or traffic.
 
-**Status:** early. Logging works; scoring, the map dashboard and the mascot are next.
+**Status:** early. Logging and ranking work; the map dashboard and the mascot are next.
 
 ## Requirements
 
@@ -39,6 +39,23 @@ Speed: 48.2 Mbit/s down, 21.7 Mbit/s up, RTT 14.0 ms (10.2 s, ~31 MB)
 Library L2: 2 samples over 0m05s, median signal -62 dBm, median ping 20 ms, 0% loss
 ```
 
+Once a place has a minute of samples, `rank` scores it. `demo` shows the same ranking for made-up places:
+
+```
+$ bin/wifi-heatmap demo
+    Place                    Score             Signal   p90 ping   Loss     Download
+ 1. Library L2, window side     99  great      -53 dBm      21 ms     0%     67 Mbit/s
+ 2. Computer lab 3              96  great      -58 dBm      18 ms     0%     89 Mbit/s
+ 3. Lecture hall A              70  ok         -66 dBm      66 ms     1%     23 Mbit/s
+ 4. Cafeteria                   56  ok         -62 dBm     225 ms     3%     12 Mbit/s  (laggy)
+ 5. Hostel lounge               35  poor       -73 dBm     201 ms     6%      7 Mbit/s  (laggy, drops packets, weak signal)
+ 6. Library basement             6  dead zone  -83 dBm     393 ms    17%      2 Mbit/s  (drops packets, laggy, weak signal)
+Not ranked yet (needs 12 samples): Bus stop (6)
+
+Best study spots: Library L2, window side, Computer lab 3, Lecture hall A
+Dead zones: Library basement
+```
+
 Other commands: `speedtest [--place NAME]`, `place list`, `place add NAME`, `place rename OLD NEW`
 (renaming keeps the history).
 
@@ -51,12 +68,14 @@ Other commands: `speedtest [--place NAME]`, `place list`, `place add NAME`, `pla
   The app is signed with a local certificate created in your login keychain, so macOS remembers your
   approval across rebuilds.
 - **Latency** is a burst of 4 pings; **speed** is macOS's built-in `networkQuality`, capped at 10 seconds.
+- **The score** (0–100) blends signal (median RSSI, −85 to −55 dBm), latency (90th-percentile ping, so
+  spikes count, 400 to 20 ms), packet loss (8% to 0%) and download speed (1 to 50 Mbit/s), weighted
+  35/25/20/20. Without a speed test, the other three are reweighted. See `wifiheatmap/score.py`.
 - **Your data** stays in `~/Library/Application Support/wifi-heatmap` (`samples.jsonl`, `places.json`),
   never in the repo.
 
 ## Planned
 
-- A score per place, with rankings for best study spots and dead zones.
 - A local web dashboard: your places as pins on a map, coloured by score.
 - An original pixel mascot, the antenna-bot, whose antenna bars show the signal.
 - A tile for [claude-widget](https://github.com/amdpaan/claude-widget).
