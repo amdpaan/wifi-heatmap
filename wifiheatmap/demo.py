@@ -81,3 +81,58 @@ def fake_ping(rnd, base, spike, loss, count=4):
     return {"ping_sent": count, "ping_recv": len(rtts), "loss": round(100.0 * (count - len(rtts)) / count, 1),
             "ping_ms": round(statistics.mean(rtts), 1), "ping_min": round(min(rtts), 1),
             "ping_max": round(max(rtts), 1), "jitter_ms": round(statistics.pstdev(rtts), 1)}
+
+
+# Where each demo place sits on DEMO_MAP, as a share of its width and height.
+PINS = {
+    "Library L2, window side": (0.215, 0.27), "Library basement": (0.30, 0.42), "Computer lab 3": (0.60, 0.22),
+    "Lecture hall A": (0.80, 0.30), "Cafeteria": (0.50, 0.62), "Hostel lounge": (0.83, 0.78),
+    "Bus stop": (0.10, 0.86),
+}
+LIVE_PLACE = "Cafeteria"   # the demo dashboard pretends you're logging here
+
+
+def with_pins(places):
+    for p in places:
+        x, y = PINS[p["name"]]
+        p["pin"] = {"x": x, "y": y}
+    return places
+
+
+def live(now, seed=None):
+    """A pretend session at LIVE_PLACE that started four minutes ago, with a fresh sample each call."""
+    rnd = random.Random(seed if seed is not None else int(now // 5))
+    pid = slug(LIVE_PLACE)
+    rssi = round(rnd.gauss(-62, 3))
+    sample = dict(kind="sample", ts=now, place=pid, session="demolive", connected=True, rssi=rssi,
+                  noise=-94, channel=44, band="5GHz", width=80, tx_rate=float(round(866 * (rssi + 90) / 40)),
+                  phy="802.11ac", ssid="Demo-WiFi", bssid="02:00:00:00:04:02",
+                  **fake_ping(rnd, 30, 0.1, 0.015))
+    return {"place": pid, "session": "demolive", "since": now - 240, "samples": 48, "sample": sample,
+            "speed": {"dl_mbps": 17.2, "ul_mbps": 6.9}}
+
+
+# A made-up campus, drawn for the demo and screenshots. Real maps are your own image, never committed.
+DEMO_MAP = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="1000" height="640">
+<rect width="1000" height="640" fill="#e4ead9"/>
+<path d="M0 560 C 250 540, 420 600, 1000 575 L1000 610 C 420 635, 250 575, 0 595 Z" fill="#c9c6bb"/>
+<path d="M120 0 L150 640 M0 470 C 300 450, 640 500, 1000 455" stroke="#f5f2e9" stroke-width="18" fill="none"/>
+<path d="M470 120 L480 560" stroke="#f5f2e9" stroke-width="12" fill="none"/>
+<g fill="#cfd8c0"><circle cx="420" cy="80" r="34"/><circle cx="700" cy="520" r="28"/><circle cx="60" cy="300" r="40"/></g>
+<g fill="#f7f4ec" stroke="#8a8577" stroke-width="3">
+<rect x="160" y="90" width="230" height="210" rx="6"/>
+<rect x="520" y="70" width="170" height="140" rx="6"/>
+<rect x="720" y="110" width="220" height="150" rx="6"/>
+<rect x="380" y="330" width="230" height="120" rx="6"/>
+<rect x="740" y="410" width="200" height="120" rx="6"/>
+</g>
+<path d="M160 230 H390" stroke="#8a8577" stroke-width="2" stroke-dasharray="6 6"/>
+<rect x="40" y="535" width="110" height="34" rx="4" fill="#f7f4ec" stroke="#8a8577" stroke-width="3"/>
+<g font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="22" fill="#5b574d" text-anchor="middle">
+<text x="275" y="125">Library</text><text x="205" y="285" font-size="15">basement</text>
+<text x="605" y="105">Labs</text><text x="830" y="145">Lecture halls</text>
+<text x="495" y="365">Cafeteria</text><text x="840" y="445">Hostel</text>
+<text x="95" y="525" font-size="17">Bus stop</text>
+</g>
+</svg>
+"""

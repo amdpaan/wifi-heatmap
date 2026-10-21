@@ -10,7 +10,7 @@ Everything runs locally on your Mac. It only measures your own connection: it re
 pings a public host and runs an occasional short speed test. It never scans or captures anyone else's
 devices or traffic.
 
-**Status:** early. Logging and ranking work; the map dashboard and the mascot are next.
+**Status:** early. Logging, ranking and the map dashboard work; the mascot and an installer are next.
 
 ## Requirements
 
@@ -56,7 +56,28 @@ Best study spots: Library L2, window side, Computer lab 3, Lecture hall A
 Dead zones: Library basement
 ```
 
-Other commands: `speedtest [--place NAME]`, `place list`, `place add NAME`, `place rename OLD NEW`
+## Dashboard
+
+```sh
+bin/wifi-heatmap serve           # opens http://127.0.0.1:8766/
+bin/wifi-heatmap serve --demo    # the same with a made-up campus (changes nothing)
+bin/wifi-heatmap serve --lan     # also from your phone on the same Wi-Fi, with a private link
+```
+
+- **Map:** upload a campus map or floor plan (PNG, JPEG or WebP) and drop a pin for each place. Each pin
+  shows the place's score, with a glow in its colour (great, ok, poor, dead zone).
+- **Rankings:** every place with its score, signal, p90 ping, loss, download and why it lost points.
+- **Place sheet:** click a place for its score parts, all its stats, its score by hour of the day (is the
+  cafeteria slow at lunch?) and its recent visits. Rename it or move its pin from there.
+- **Check in:** start and stop logging from the dashboard (or your phone, with `--lan`). Logging from the
+  terminal shows up live too.
+
+Like net-watch's dashboard, it only answers `127.0.0.1` unless you pass `--lan`; then other devices need the
+token in the link it prints. The uploaded map stays in your data folder.
+
+## More commands
+
+`speedtest [--place NAME]`, `place list`, `place add NAME`, `place rename OLD NEW`
 (renaming keeps the history).
 
 ## How it works
@@ -71,12 +92,12 @@ Other commands: `speedtest [--place NAME]`, `place list`, `place add NAME`, `pla
 - **The score** (0–100) blends signal (median RSSI, −85 to −55 dBm), latency (90th-percentile ping, so
   spikes count, 400 to 20 ms), packet loss (8% to 0%) and download speed (1 to 50 Mbit/s), weighted
   35/25/20/20. Without a speed test, the other three are reweighted. See `wifiheatmap/score.py`.
-- **Your data** stays in `~/Library/Application Support/wifi-heatmap` (`samples.jsonl`, `places.json`),
-  never in the repo.
+- **Your data** stays in `~/Library/Application Support/wifi-heatmap` (`samples.jsonl`, `places.json`,
+  `maps/`), never in the repo.
 
 ## Planned
 
-- A local web dashboard: your places as pins on a map, coloured by score.
+- An installer, and screenshots here.
 - An original pixel mascot, the antenna-bot, whose antenna bars show the signal.
 - A tile for [claude-widget](https://github.com/amdpaan/claude-widget).
 

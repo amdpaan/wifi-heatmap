@@ -1,14 +1,13 @@
 """Command line: wifi-heatmap <command>. Run `wifi-heatmap --help`."""
 
 import argparse
-import statistics
+import subprocess
 import sys
 import time
-import uuid
 from collections import Counter
 from datetime import datetime
 
-from . import demo, measure, paths, places, samples, score, wifi
+from . import demo, logger, measure, paths, places, samples, score, wifi
 
 
 class CliError(Exception):
@@ -100,55 +99,25 @@ def cmd_now(a):
 
 def cmd_log(a):
     p = resolve_place(a.place, a.new)
-    base = {"place": p["id"], "session": uuid.uuid4().hex[:8]}
-    reader = wifi.Reader()
-    streaming = reader.start()
-    first = reader.read()
-    print(f"Logging at {p['name']} every {a.interval:g} s. Ctrl-C to stop.")
-    note = bssid_note(first, streaming)
-    if note:
-        print(note)
-    samples.append(dict(kind="checkin", ts=round(time.time(), 1), **base))
 
-    if not a.no_speedtest:
-        print("Speed test (about 10 s)...", flush=True)
-        s = measure.speedtest()
-        samples.append(dict(kind="speed", ts=round(time.time(), 1), **base, **s))
-        print(speed_line(s))
+    def out(event, **k):
+        if event == "start":
+            print(f"Logging at {p['name']} every {a.interval:g} s. Ctrl-C to stop.")
+            note = bssid_note(k["first"], k["streaming"])
+            if note:
+                print(note)
+        elif event == "speedtest":
+            print("Speed test (about 10 s)...", flush=True)
+        elif event == "speed":
+            print(speed_line(k["result"]))
+        elif event == "sample":
+            print(line(k["rec"]), flush=True)
 
-    started, n, rssi, pings, lost, sent = time.time(), 0, [], [], 0, 0
-    try:
-        while a.count is None or n < a.count:
-            t0 = time.time()
-            w = reader.read()
-            rec = dict(kind="sample", ts=round(t0, 1), **base,
-                       **{k: w.get(k) for k in samples.WIFI_KEYS}, **measure.ping())
-            samples.append(rec)
-            print(line(rec), flush=True)
-            n += 1
-            if rec.get("rssi") is not None:
-                rssi.append(rec["rssi"])
-            if rec.get("ping_ms") is not None:
-                pings.append(rec["ping_ms"])
-            sent += rec["ping_sent"]
-            lost += rec["ping_sent"] - rec["ping_recv"]
-            if a.count is None or n < a.count:
-                time.sleep(max(0.0, a.interval - (time.time() - t0)))
-    except KeyboardInterrupt:
+    session = logger.Session(p, interval=a.interval, speedtest=not a.no_speedtest, out=out)
+    summary = session.run(count=a.count)
+    if a.count is None:
         print()
-    finally:
-        reader.stop()
-        samples.append(dict(kind="checkout", ts=round(time.time(), 1), **base))
-
-    mins, secs = divmod(int(time.time() - started), 60)
-    parts = [f"{n} samples over {mins}m{secs:02d}s"]
-    if rssi:
-        parts.append(f"median signal {statistics.median(rssi):.0f} dBm")
-    if pings:
-        parts.append(f"median ping {statistics.median(pings):.0f} ms")
-    if sent:
-        parts.append(f"{100.0 * lost / sent:.0f}% loss")
-    print(f"{p['name']}: " + ", ".join(parts))
+    print(summary)
     return 0
 
 
@@ -207,6 +176,34 @@ def cmd_demo(a):
     return 0
 
 
+def cmd_serve(a):
+    from . import serve
+    app = serve.App(demo_mode=a.demo, lan=a.lan, token=serve.lan_token(a.new_token) if a.lan else None,
+                    verbose=a.verbose)
+    try:
+        server = serve.make_server(app, "0.0.0.0" if a.lan else "127.0.0.1", a.port)
+    except OSError as ex:
+        raise CliError(f"Can't use port {a.port}: {ex.strerror}. Is the dashboard already running? Try --port.")
+    url = f"http://127.0.0.1:{a.port}/"
+    print(f"wifi-heatmap dashboard{' (demo)' if a.demo else ''}: {url}")
+    if a.lan:
+        host = serve.local_hostname() or "<this Mac's name>.local"
+        print(f"On your phone (same Wi-Fi): http://{host}:{a.port}/?t={app.token}")
+        print("Keep that link private: anyone with it on this network can see your places and start logging.")
+    print("Ctrl-C to stop.")
+    if not a.no_open:
+        subprocess.run(["open", url], check=False)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print()
+    finally:
+        if app.logging_here():
+            print(app.checkout())
+        server.server_close()
+    return 0
+
+
 def cmd_place(a):
     if a.action == "add":
         p = places.add(a.name)
@@ -255,6 +252,15 @@ def parser():
 
     s = sub.add_parser("demo", help="the ranking for made-up places (saves nothing)")
     s.set_defaults(fn=cmd_demo)
+
+    s = sub.add_parser("serve", help="open the dashboard: map, rankings, check in from your phone")
+    s.add_argument("--demo", action="store_true", help="made-up campus and data (changes nothing)")
+    s.add_argument("--port", type=int, default=8766)
+    s.add_argument("--lan", action="store_true", help="also reachable from your phone on the same Wi-Fi (with a token)")
+    s.add_argument("--new-token", action="store_true", help="with --lan: make a new phone link (the old one stops working)")
+    s.add_argument("--no-open", action="store_true", help="don't open the browser")
+    s.add_argument("--verbose", action="store_true", help="log every request")
+    s.set_defaults(fn=cmd_serve)
 
     s = sub.add_parser("place", help="list, add or rename places")
     s.add_argument("action", nargs="?", default="list", choices=("list", "add", "rename"))

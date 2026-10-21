@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>wifi-heatmap</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="hero-text">
+    <p class="eyebrow" id="eyebrow">wifi-heatmap</p>
+    <h1 id="headline">Loading…</h1>
+    <p class="sub" id="subtitle"></p>
+  </div>
+  <div class="actions">
+    <button class="btn" id="checkin-btn" type="button">Check in</button>
+    <button class="icon-btn" id="theme-btn" type="button" aria-label="Switch light/dark mode" title="Light/dark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="notice" id="notice" hidden></div>
+
+  <section class="live" id="live" hidden aria-live="polite" aria-label="Logging now">
+    <span class="dot" aria-hidden="true"></span>
+    <div>
+      <div class="live-place" id="live-place"></div>
+      <div class="live-stats" id="live-stats"></div>
+    </div>
+    <button class="btn ghost" id="stop-btn" type="button">Stop</button>
+  </section>
+
+  <section class="panel" aria-labelledby="map-title">
+    <div class="panel-head">
+      <h2 id="map-title">Map</h2>
+      <div class="tools" id="map-tools">
+        <button class="btn ghost small" id="pin-btn" type="button">Place pins</button>
+        <label class="btn ghost small" id="upload-label">Upload map
+          <input type="file" id="map-file" accept="image/png,image/jpeg,image/webp" class="sr">
+        </label>
+      </div>
+    </div>
+    <div class="pin-bar" id="pin-bar" hidden>
+      <label for="pin-place">Pick a place, then tap the map:</label>
+      <select id="pin-place"></select>
+      <button class="btn ghost small" id="pin-clear" type="button">Remove pin</button>
+      <button class="btn small" id="pin-done" type="button">Done</button>
+    </div>
+    <div class="map" id="map" hidden>
+      <img id="map-img" alt="Your map, with a pin for each place coloured by its score">
+      <svg class="heat" id="heat" aria-hidden="true"></svg>
+      <div id="pins"></div>
+    </div>
+    <div class="map-empty" id="map-empty" hidden>
+      <p>No map yet. Upload a campus map or a floor plan (PNG, JPEG or WebP), then drop a pin for each place.</p>
+      <label class="btn" for="map-file">Upload map</label>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="rank-title">
+    <div class="panel-head"><h2 id="rank-title">Rankings</h2></div>
+    <div class="table-wrap">
+      <table id="rank-table">
+        <thead>
+          <tr>
+            <th><span class="sr">Rank</span></th>
+            <th>Place</th>
+            <th>Score</th>
+            <th class="num">Signal</th>
+            <th class="num">p90 ping</th>
+            <th class="num">Loss</th>
+            <th class="num">Download</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="rank-empty" hidden></p>
+    <p class="waiting" id="waiting" hidden></p>
+  </section>
+</main>
+
+<dialog id="detail" aria-labelledby="d-name"><div class="dlg" id="detail-body"></div></dialog>
+
+<dialog id="checkin" aria-labelledby="ci-title">
+  <form class="dlg" id="checkin-form" method="dialog">
+    <div class="dlg-head">
+      <h2 id="ci-title">Check in</h2>
+      <button class="icon-btn close" type="button" data-close aria-label="Close">✕</button>
+    </div>
+    <label>Where are you?
+      <input type="text" id="ci-place" list="ci-places" placeholder="Library L2, window side" maxlength="80" required autocomplete="off">
+    </label>
+    <datalist id="ci-places"></datalist>
+    <label class="check"><input type="checkbox" id="ci-speed" checked> Run a speed test first (about 10 s, ~30 MB)</label>
+    <label class="check" id="ci-new-row" hidden><input type="checkbox" id="ci-new"> Create it as a new place anyway</label>
+    <p class="form-error" id="ci-error" hidden></p>
+    <p class="hint">Logs your Wi-Fi and a ping every 5 s until you press Stop.</p>
+    <div class="dlg-actions">
+      <button class="btn" type="submit" id="ci-go">Start logging</button>
+      <button class="btn ghost" type="button" data-close>Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+</body>
+</html>

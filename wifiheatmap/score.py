@@ -10,6 +10,7 @@ A place without a speed test is scored on the other three, reweighted.
 
 import math
 import statistics
+from datetime import datetime
 
 WEIGHTS = {"signal": 0.35, "latency": 0.25, "loss": 0.20, "speed": 0.20}
 MIN_SAMPLES = 12          # 1 minute at the default 5 s, before a place is ranked
@@ -127,3 +128,66 @@ def best(rows, n=3):
 def dead(rows, n=3):
     return sorted([r for r in rows if r["score"] is not None and r["score"] < DEAD_MAX],
                   key=lambda r: r["score"])[:n]
+
+
+MIN_HOUR = 6   # samples in an hour before that hour gets a score
+
+
+def by_hour(samples):
+    """The same stats per hour of the day (local time), to spot a cafeteria that's slow at lunch.
+    Speed tests are too rare per hour, so hourly scores use signal, latency and loss only."""
+    hours = {}
+    for s in samples:
+        hours.setdefault(datetime.fromtimestamp(s["ts"]).hour, []).append(s)
+    out = []
+    for h in sorted(hours):
+        st = place_stats(hours[h], [])
+        out.append({"hour": h, "samples": st["samples"], "rssi": st["rssi"], "ping_p90": st["ping_p90"],
+                    "loss": st["loss"], "score": score(parts(st)) if st["samples"] >= MIN_HOUR else None})
+    return out
+
+
+def detail(places, records, pid):
+    """Everything the dashboard's place sheet shows, or None for an unknown place."""
+    p = next((p for p in places if p["id"] == pid), None)
+    if not p:
+        return None
+    mine = [r for r in records if r.get("place") == pid]
+    row = summarize([p], mine)[0]
+    samples = [r for r in mine if r.get("kind") == "sample"]
+    sessions = {}
+    for s in samples:
+        sessions.setdefault(s.get("session"), []).append(s)
+    recent = []
+    for sid, ss in sessions.items():
+        rssi = [s["rssi"] for s in ss if s.get("rssi") is not None]
+        pings = [s["ping_ms"] for s in ss if s.get("ping_ms") is not None]
+        recent.append({"session": sid, "start": ss[0]["ts"], "end": ss[-1]["ts"], "samples": len(ss),
+                       "rssi": statistics.median(rssi) if rssi else None,
+                       "ping_ms": statistics.median(pings) if pings else None})
+    recent.sort(key=lambda r: -r["start"])
+    return dict(row, pin=p.get("pin"), hours=by_hour(samples), recent=recent[:5])
+
+
+LIVE_GRACE = 30   # a session counts as live while its last record is this fresh (seconds)...
+SPEED_GRACE = 90  # ...or this, right after check-in, while the speed test runs
+
+
+def live(records, now):
+    """The session being logged right now (from the terminal or the dashboard), or None."""
+    last, sessions = None, {}
+    for r in records:
+        sid = r.get("session")
+        if sid:
+            s = sessions.setdefault(sid, {"place": r.get("place"), "session": sid, "since": r["ts"],
+                                          "samples": 0, "sample": None, "speed": None})
+            if r.get("kind") == "sample":
+                s["samples"] += 1
+                s["sample"] = r
+            elif r.get("kind") == "speed":
+                s["speed"] = r
+        last = r
+    if not last or last.get("kind") == "checkout" or not last.get("session") or now - last["ts"] > (
+            SPEED_GRACE if last.get("kind") in ("checkin", "speed") else LIVE_GRACE):
+        return None
+    return sessions[last["session"]]
