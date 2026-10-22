@@ -81,6 +81,7 @@ function byId(id) { return S && S.places.find((p) => p.id === id); }
 // ---------- the antenna-bot: wifi-heatmap's own pixel mascot (16×22 grid). Letters are colours
 // (style.css .bot-*); 1-4 are the chest's signal bars. The base is always drawn; each layer only draws
 // the cells that differ from it ("z" paints over with the page colour), and CSS shows the layers for the mood.
+// claude-widget's Wi-Fi Heatmap card draws the same art (widget.jsx BOT, BOT_LAYERS): keep the two in sync.
 const BOT = [
   "................",
   ".......tt.......",

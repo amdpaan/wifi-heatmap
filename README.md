@@ -121,9 +121,12 @@ token in the link it prints. The uploaded map stays in your data folder.
 - **Your data** stays in `~/Library/Application Support/wifi-heatmap` (`samples.jsonl`, `places.json`,
   `maps/`), never in the repo.
 
-## Planned
+## Desktop widget
 
-- A tile for [claude-widget](https://github.com/amdpaan/claude-widget).
+Every check-in, sample and checkout also rewrites `summary.json` in the data folder: the antenna-bot's
+mood, what you're logging right now, the best spot and the dead zones (never a network name or access
+point). [claude-widget](https://github.com/amdpaan/claude-widget) shows it as a Wi-Fi Heatmap card with
+the antenna-bot. `wifi-heatmap summary` rewrites it by hand.
 
 ## Development
 

@@ -8,6 +8,7 @@ import time
 import uuid
 
 from . import measure, samples, wifi
+from . import summary as summary_file
 
 
 class Session:
@@ -28,6 +29,7 @@ class Session:
             first = reader.read()
             self.out("start", first=first, streaming=streaming)
             samples.append(dict(kind="checkin", ts=round(time.time(), 1), **self.base))
+            self.refresh()
             if self.speedtest and not stop.is_set():
                 self.out("speedtest")
                 s = measure.speedtest()
@@ -43,6 +45,7 @@ class Session:
             except KeyboardInterrupt:
                 pass
             samples.append(dict(kind="checkout", ts=round(time.time(), 1), **self.base))
+            self.refresh()
         finally:
             reader.stop()
         return self.summary()
@@ -60,6 +63,14 @@ class Session:
         self.sent += rec["ping_sent"]
         self.lost += rec["ping_sent"] - rec["ping_recv"]
         self.out("sample", rec=rec)
+        self.refresh()
+
+    def refresh(self):
+        """Rewrite summary.json for widgets. Never stops the logging if it fails."""
+        try:
+            summary_file.write()
+        except (OSError, ValueError) as e:
+            self.out("summary_error", error=e)
 
     def summary(self):
         mins, secs = divmod(int(time.time() - (self.started or time.time())), 60)

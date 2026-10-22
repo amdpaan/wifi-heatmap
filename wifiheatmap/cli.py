@@ -7,7 +7,7 @@ import time
 from collections import Counter
 from datetime import datetime
 
-from . import demo, logger, measure, paths, places, samples, score, wifi
+from . import demo, logger, measure, paths, places, samples, score, summary, wifi
 
 
 class CliError(Exception):
@@ -204,12 +204,21 @@ def cmd_serve(a):
     return 0
 
 
+def cmd_summary(a):
+    d = summary.write()
+    print(f"Wrote {paths.SUMMARY}: mood {d['mood']}, {d['ranked']} of {d['places']} places ranked"
+          + (f", logging at {d['live']['place']}" if d["live"] else ""))
+    return 0
+
+
 def cmd_place(a):
     if a.action == "add":
         p = places.add(a.name)
+        summary.write()
         print(f"Added {p['name']} ({p['id']})")
     elif a.action == "rename":
         p = places.rename(a.name, a.new_name)
+        summary.write()
         print(f"Renamed to {p['name']} ({p['id']}, history kept)")
     else:
         known = places.load()
@@ -261,6 +270,9 @@ def parser():
     s.add_argument("--no-open", action="store_true", help="don't open the browser")
     s.add_argument("--verbose", action="store_true", help="log every request")
     s.set_defaults(fn=cmd_serve)
+
+    s = sub.add_parser("summary", help="rewrite summary.json for desktop widgets (logging does this itself)")
+    s.set_defaults(fn=cmd_summary)
 
     s = sub.add_parser("place", help="list, add or rename places")
     s.add_argument("action", nargs="?", default="list", choices=("list", "add", "rename"))

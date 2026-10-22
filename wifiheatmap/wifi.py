@@ -81,9 +81,14 @@ def once():
         raise HelperMissing(f"The Wi-Fi helper failed: {(r.stderr or r.stdout).strip()[:200]}")
 
 
+BAR_STEPS = (-80, -72, -65, -55)   # dBm for 1-4 bars (the dashboard's app.js uses the same)
+
+
+def bar_count(rssi):
+    return 0 if rssi is None else sum(rssi >= t for t in BAR_STEPS)
+
+
 def bars(rssi):
     """Signal bars like the menu bar's, from RSSI in dBm."""
-    if rssi is None:
-        return "····"
-    n = sum(rssi >= t for t in (-80, -72, -65, -55))
+    n = bar_count(rssi)
     return "▂▄▆█"[:n] + "·" * (4 - n)

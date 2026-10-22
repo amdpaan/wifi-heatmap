@@ -9,6 +9,7 @@ SAMPLES = SUPPORT / "samples.jsonl"
 PLACES = SUPPORT / "places.json"
 CONFIG = SUPPORT / "config.json"      # the dashboard's LAN token
 MAPS = SUPPORT / "maps"               # your uploaded map image
+SUMMARY = SUPPORT / "summary.json"    # for desktop widgets (summary.py)
 LATEST = SUPPORT / "wifi-latest.json"   # rewritten every few seconds by the helper app while logging
 HELPER_APP = SUPPORT / "WiFi Heatmap Helper.app"
 HELPER_BIN = HELPER_APP / "Contents/MacOS/wifi-heatmap-helper"
