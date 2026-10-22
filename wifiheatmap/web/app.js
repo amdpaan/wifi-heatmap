@@ -11,6 +11,7 @@ let S = null;            // last /api/state
 let placing = false;     // pin mode
 let timer = null;
 let openId = null;       // place shown in the detail sheet
+let phoneOk = false;     // /api/phone answers: we're on the Mac itself, not the phone
 
 // ---------- helpers
 function h(tag, attrs, ...kids) {
@@ -200,6 +201,7 @@ function render() {
   else note.hidden = true;
 
   $("checkin-btn").hidden = S.demo;
+  $("phone-btn").hidden = !phoneOk || S.demo;
   $("checkin-btn").disabled = !!S.live;
   $("map-tools").hidden = S.demo;
   renderLive();
@@ -513,6 +515,45 @@ for (const d of document.querySelectorAll("dialog")) {
   d.addEventListener("click", (ev) => { if (ev.target === d) d.close(); });   // click the backdrop
 }
 
+// ---------- phone link (only this Mac gets an answer: the link carries the access token)
+async function checkPhone() {
+  try { await api("/api/phone"); phoneOk = true; }
+  catch (e) { phoneOk = false; }   // 403 on the phone itself: no button there
+  $("phone-btn").hidden = !phoneOk || (S && S.demo);
+}
+function qrSvg(rows) {
+  const pad = 3;   // CoreImage leaves a 1-module margin; scanners like about 4
+  const n = rows.length + 2 * pad;
+  const svg = s("svg", { viewBox: "0 0 " + n + " " + n, class: "qr", "shape-rendering": "crispEdges", role: "img",
+    "aria-label": "QR code for the phone link" });
+  svg.append(s("rect", { class: "bg", width: n, height: n }));
+  rows.forEach((r, y) => [...r].forEach((c, x) => {
+    if (c === "1") svg.append(s("rect", { class: "m", x: x + pad, y: y + pad, width: 1.02, height: 1.02 }));
+  }));
+  return svg;
+}
+$("phone-btn").addEventListener("click", async () => {
+  const body = $("phone-body");
+  body.replaceChildren(h("p", { class: "hint" }, "Loading…"));
+  $("phone").showModal();
+  let d;
+  try { d = await api("/api/phone"); } catch (e) { body.replaceChildren(h("p", { class: "form-error" }, e.message)); return; }
+  if (!d.lan) {
+    body.replaceChildren(
+      h("p", null, "Phone access is off: the dashboard only answers this Mac."),
+      h("p", { class: "hint" }, "To turn it on, run this once in Terminal (in the wifi-heatmap folder):"),
+      h("p", null, h("code", null, "./install.sh --agent --lan")));
+    return;
+  }
+  body.replaceChildren(
+    d.qr ? qrSvg(d.qr) : h("p", { class: "hint" }, "No QR code (the Wi-Fi helper isn't built). Type the link instead:"),
+    h("ul", { class: "links" }, ...d.links.map((l) => h("li", null, h("code", null, l)))),
+    h("ul", { class: "phone-notes" },
+      h("li", null, "Scan it with the phone's camera. The phone must be on the same Wi-Fi as this Mac."),
+      h("li", null, "Campus Wi-Fi often stops devices from reaching each other. If the page won't load, turn on your phone's hotspot and connect this Mac to it, then reopen this to get the new link."),
+      h("li", null, "Keep the link private: anyone with it on the same network can see your places and start logging.")));
+});
+
 // ---------- theme
 function setTheme(t) {
   if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
@@ -540,5 +581,6 @@ async function refresh() {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 drawBot();
+checkPhone();
 window.addEventListener("resize", hideTip);
 refresh();

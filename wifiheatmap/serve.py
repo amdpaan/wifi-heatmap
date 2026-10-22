@@ -8,6 +8,7 @@ Access rules (the same as net-watch's dashboard):
 - Writes are POSTs with a JSON body (or an image, for the map). Browsers can't send those cross-site without
   a CORS preflight, which we never answer.
 - --demo serves made-up data and refuses every write.
+- /api/phone (the phone link with the token, and its QR code) only ever answers this Mac itself.
 """
 
 import hmac
@@ -117,6 +118,14 @@ class App:
             "min_samples": score.MIN_SAMPLES,
             "thresholds": {"great": score.GREAT, "ok": score.OK, "poor": score.POOR},
         }
+
+    def phone(self, port):
+        """The links (and a QR code for the first) that open the dashboard on a phone on the same network."""
+        if not self.lan:
+            return {"lan": False}
+        hosts = [h for h in (local_ip(), local_hostname()) if h]
+        links = ["http://%s:%d/?t=%s" % (h, port, self.token) for h in hosts]
+        return {"lan": True, "links": links, "qr": qr_rows(links[0]) if links else None}
 
     def detail(self, pid):
         d = score.detail(self.places(), self.records(), pid)
@@ -291,6 +300,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, (WEB / name).read_bytes(), ctype)
             if url.path == "/api/state":
                 return self.json(self.app.state())
+            if url.path == "/api/phone":
+                if not self.from_loopback():
+                    raise Refused(403, "The phone link is only shown on the Mac itself.")
+                return self.json(self.app.phone(self.server.server_port))
             if url.path == "/map":
                 data, ctype = self.app.map_bytes()
                 return self.send(200, data, ctype)
@@ -371,6 +384,30 @@ def lan_token(rotate=False):
         paths.CONFIG.write_text(json.dumps(cfg, indent=2) + "\n")
         paths.CONFIG.chmod(0o600)
     return cfg["lan_token"]
+
+
+def local_ip():
+    """This Mac's address on its Wi-Fi (en0), or another interface's if it's on Ethernet."""
+    for iface in ("en0", "en1"):
+        r = subprocess.run(["/usr/sbin/ipconfig", "getifaddr", iface], capture_output=True, text=True)
+        if r.stdout.strip():
+            return r.stdout.strip()
+    return None
+
+
+_qr_cache = {}
+
+
+def qr_rows(text):
+    """The QR code for text as rows of "0"/"1", from the Wi-Fi helper (CoreImage), or None."""
+    if text not in _qr_cache:
+        try:
+            r = subprocess.run([str(paths.HELPER_BIN), "--qr", text], capture_output=True, text=True, timeout=5)
+            rows = r.stdout.split()
+            _qr_cache[text] = rows if r.returncode == 0 and rows and all(set(x) <= {"0", "1"} for x in rows) else None
+        except (OSError, subprocess.TimeoutExpired):
+            _qr_cache[text] = None
+    return _qr_cache[text]
 
 
 def local_hostname():

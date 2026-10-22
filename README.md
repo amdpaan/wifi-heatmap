@@ -38,13 +38,27 @@ dead zone. While you're logging, it follows your live signal and its antenna bli
 ```sh
 git clone https://github.com/amdpaan/wifi-heatmap ~/Projects/wifi-heatmap
 cd ~/Projects/wifi-heatmap
-./install.sh              # links `wifi-heatmap` into ~/.local/bin and builds the Wi-Fi helper app
-./install.sh --agent      # also keeps the dashboard running from login (127.0.0.1 only)
+./install.sh                  # the `wifi-heatmap` command, the Wi-Fi helper app and Wi-Fi Heatmap.app
+./install.sh --agent          # also keeps the dashboard running from login (this Mac only)
+./install.sh --agent --lan    # ... and reachable from your phone on the same Wi-Fi, with a private link
 ```
 
 Then run `wifi-heatmap now` once and allow Location Services when macOS asks (see
-[How it works](#how-it-works) for why). Re-run `./install.sh` after `git pull`. `./uninstall.sh` removes the
-command and the agent but keeps your data; `./uninstall.sh --purge` deletes that too.
+[How it works](#how-it-works) for why). Re-run `./install.sh` (with the same options) after `git pull`.
+`./uninstall.sh` removes the command, the app and the agent but keeps your data; `./uninstall.sh --purge`
+deletes that too.
+
+## Without the terminal
+
+With the agent installed, everything day to day happens in the dashboard:
+
+- **Open it:** **Wi-Fi Heatmap** in Launchpad or `~/Applications` (the antenna-bot icon), the Wi-Fi Heatmap
+  card on [claude-widget](https://github.com/amdpaan/claude-widget), or http://127.0.0.1:8766/.
+- **Log a place:** **Check in**, type where you are, **Start logging**; **Stop** when you leave.
+- **On your phone** (installed with `--lan`): press **Phone** on the dashboard and scan the QR code. Then you
+  can check in and stop from your phone while you walk around. The link only shows on the Mac itself.
+  Campus Wi-Fi often stops devices from reaching each other; if the page won't load, connect the Mac to your
+  phone's hotspot and scan the new code.
 
 ## Log a place
 
@@ -87,7 +101,7 @@ Dead zones: Library basement
 ```sh
 wifi-heatmap serve           # opens http://127.0.0.1:8766/
 wifi-heatmap serve --demo    # the same with a made-up campus (changes nothing)
-wifi-heatmap serve --lan     # also from your phone on the same Wi-Fi, with a private link
+wifi-heatmap serve --lan     # also from your phone on the same Wi-Fi (the Phone button shows the link)
 ```
 
 - **Map:** upload a campus map or floor plan (PNG, JPEG or WebP; a screenshot of a map app works) and drop a
@@ -99,7 +113,8 @@ wifi-heatmap serve --lan     # also from your phone on the same Wi-Fi, with a pr
   terminal shows up live too.
 
 Like net-watch's dashboard, it only answers `127.0.0.1` unless you pass `--lan`; then other devices need the
-token in the link it prints. The uploaded map stays in your data folder.
+token in the link (once opened, it's kept in a cookie). Only the Mac itself can see that link, via the Phone
+button. The uploaded map stays in your data folder.
 
 ## More commands
 

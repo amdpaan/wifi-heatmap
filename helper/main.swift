@@ -7,11 +7,14 @@
 // Usage:
 //   wifi-heatmap-helper --once
 //       print one sample as JSON and exit. Run as a plain binary, SSID and BSSID are null.
+//   wifi-heatmap-helper --qr <text>
+//       print the QR code for <text> as rows of 0/1 (for the dashboard's phone link) and exit.
 //   wifi-heatmap-helper --stream <file> [--interval 2] [--parent <pid>]
 //       rewrite <file> (atomically) with the latest sample every interval seconds, until <pid> exits.
 //       Asks for Location permission the first time. Output goes to a file because `open` doesn't
 //       pass stdout back to the caller.
 
+import CoreImage
 import CoreLocation
 import CoreWLAN
 import Foundation
@@ -64,6 +67,24 @@ func arg(_ name: String) -> String? {
     let a = CommandLine.arguments
     guard let k = a.firstIndex(of: name), k + 1 < a.count else { return nil }
     return a[k + 1]
+}
+
+// --qr <text>: the QR code for the dashboard's phone link, as rows of 0/1 (1 = dark), quiet zone included.
+// CoreImage has the encoder built in, so the dashboard needs no QR library.
+if let text = arg("--qr") {
+    let f = CIFilter(name: "CIQRCodeGenerator")!
+    f.setValue(text.data(using: .utf8), forKey: "inputMessage")
+    f.setValue("M", forKey: "inputCorrectionLevel")
+    guard let img = f.outputImage, let cg = CIContext().createCGImage(img, from: img.extent) else { exit(1) }
+    let w = cg.width, h = cg.height
+    var px = [UInt8](repeating: 0, count: w * h)
+    let ctx = CGContext(data: &px, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w,
+                        space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)!
+    ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+    for y in 0..<h {
+        print(String((0..<w).map { px[y * w + $0] < 128 ? "1" : "0" }))
+    }
+    exit(0)
 }
 
 if CommandLine.arguments.contains("--once") {

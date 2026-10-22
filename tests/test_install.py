@@ -15,7 +15,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 def run(script, home, *args):
     env = dict(os.environ, HOME=str(home), WIFI_HEATMAP_NO_LAUNCHCTL="1", WIFI_HEATMAP_NO_HELPER="1",
-               WIFI_HEATMAP_HOME=str(home / "wh"))
+               WIFI_HEATMAP_NO_APP="1", WIFI_HEATMAP_HOME=str(home / "wh"))
     return subprocess.run(["sh", str(REPO / script)] + list(args), env=env, capture_output=True, text=True)
 
 
@@ -25,7 +25,7 @@ class Install(unittest.TestCase):
 
     def test_scripts_parse(self):
         for script in ("install.sh", "uninstall.sh", "bin/wifi-heatmap", "tools/build-helper.sh",
-                       "tools/screenshots.sh"):
+                       "tools/screenshots.sh", "tools/make-app.sh"):
             self.assertEqual(subprocess.run(["sh", "-n", str(REPO / script)]).returncode, 0, script)
 
     def test_command_only(self):
@@ -46,8 +46,17 @@ class Install(unittest.TestCase):
         self.assertEqual(plist["EnvironmentVariables"]["WIFI_HEATMAP_HOME"], str(self.home / "wh"))
         self.assertTrue(plist["StandardOutPath"].endswith("logs/serve.log"))
 
-    def test_bad_option(self):
+    def test_agent_lan(self):
+        p = run("install.sh", self.home, "--agent", "--lan")
+        self.assertEqual(p.returncode, 0, p.stderr + p.stdout)
+        with open(str(self.home / "Library/LaunchAgents/com.wifiheatmap.serve.plist"), "rb") as f:
+            args = plistlib.load(f)["ProgramArguments"]
+        self.assertEqual(args[1:], ["serve", "--no-open", "--lan"])
+        self.assertIn("your phone", p.stdout)
+
+    def test_bad_options(self):
         self.assertNotEqual(run("install.sh", self.home, "--bogus").returncode, 0)
+        self.assertNotEqual(run("install.sh", self.home, "--lan").returncode, 0)   # --lan needs --agent
 
     def test_uninstall_keeps_data_unless_purge(self):
         run("install.sh", self.home, "--agent")
@@ -59,6 +68,16 @@ class Install(unittest.TestCase):
         self.assertTrue((self.home / "wh" / "samples.jsonl").exists())
         run("uninstall.sh", self.home, "--purge")
         self.assertFalse((self.home / "wh").exists())
+
+
+class Icon(unittest.TestCase):
+    def test_icon_draws_from_the_dashboard_art(self):
+        out = Path(tempfile.mkdtemp()) / "icon.png"
+        p = subprocess.run(["/usr/bin/python3", str(REPO / "tools/icon.py"), str(out), "64"], capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        data = out.read_bytes()
+        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(data[16:24], (64).to_bytes(4, "big") * 2)   # IHDR width, height
 
 
 if __name__ == "__main__":

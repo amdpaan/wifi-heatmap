@@ -251,6 +251,15 @@ form.dlg .check { display: flex; gap: 8px; align-items: center; font-weight: 400
 .form-error { margin: 0; color: var(--dead); }
 .hint { margin: 0; color: var(--muted); font-size: 13px; }
 
+/* ---------- phone link */
+#phone-body { display: grid; gap: 14px; }
+.qr { width: 220px; max-width: 100%; display: block; margin: 0 auto; border-radius: 10px; }
+.qr rect.bg { fill: #ffffff; }   /* always dark on light: phone scanners can't read an inverted code */
+.qr rect.m { fill: #000000; }
+.links { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.links code { font: 13px var(--mono); overflow-wrap: anywhere; user-select: all; }
+.phone-notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; display: grid; gap: 4px; }
+
 /* ---------- tooltip */
 .tip {
   position: fixed; z-index: 10; pointer-events: none; background: var(--ink); color: var(--paper);

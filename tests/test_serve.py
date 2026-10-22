@@ -178,6 +178,32 @@ class Real(Base):
         self.assertIn("build-helper", d["error"])
 
 
+class Phone(Base):
+    def test_off_without_lan(self):
+        s = Server()
+        try:
+            self.assertEqual(s.req("GET", "/api/phone"), (200, {"lan": False}))
+        finally:
+            s.close()
+
+    def test_links_carry_the_token(self):
+        s = Server(lan=True, token="tok123")
+        try:
+            with mock.patch.object(serve, "local_ip", return_value="10.0.0.5"), \
+                    mock.patch.object(serve, "local_hostname", return_value="my-mac.local"), \
+                    mock.patch.object(serve, "qr_rows", return_value=["101", "010", "101"]):
+                code, d = s.req("GET", "/api/phone")
+        finally:
+            s.close()
+        self.assertEqual(code, 200)
+        self.assertEqual(d["links"], ["http://10.0.0.5:%d/?t=tok123" % s.port, "http://my-mac.local:%d/?t=tok123" % s.port])
+        self.assertEqual(d["qr"], ["101", "010", "101"])
+
+    def test_qr_without_helper_is_none(self):
+        serve._qr_cache.clear()
+        self.assertIsNone(serve.qr_rows("http://example/"))   # no helper app in the test home
+
+
 class Live(unittest.TestCase):
     def rec(self, kind, ts, session="a"):
         return {"kind": kind, "ts": ts, "place": "p", "session": session}

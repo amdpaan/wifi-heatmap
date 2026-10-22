@@ -21,6 +21,7 @@
   </div>
   <div class="actions">
     <button class="btn" id="checkin-btn" type="button">Check in</button>
+    <button class="btn ghost" id="phone-btn" type="button" hidden>Phone</button>
     <button class="icon-btn" id="theme-btn" type="button" aria-label="Switch light/dark mode" title="Light/dark">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
@@ -112,6 +113,16 @@
       <button class="btn ghost" type="button" data-close>Cancel</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="phone" aria-labelledby="ph-title">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="ph-title">Open on your phone</h2>
+      <button class="icon-btn close" type="button" data-close aria-label="Close">✕</button>
+    </div>
+    <div id="phone-body"></div>
+  </div>
 </dialog>
 
 <div class="tip" id="tip" role="tooltip" hidden></div>
