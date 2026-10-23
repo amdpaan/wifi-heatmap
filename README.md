@@ -10,11 +10,11 @@ Everything runs locally on your Mac. It only measures your own connection: it re
 pings a public host and runs an occasional short speed test. It never scans or captures anyone else's
 devices or traffic.
 
-![The dashboard: a campus map with a pin and a glow per place, coloured by score, and the rankings](docs/screenshots/dash-light.jpg)
+![The dashboard: the best spot and its score in huge type, four metric cells with segmented meters, a campus map with a pin and a glow per place coloured by score, and the rankings](docs/screenshots/dash.jpg)
 
 <p align="center">
   <img src="docs/screenshots/detail.jpg" width="64%" alt="A place's sheet: score parts, stats, score by hour of day and recent visits">
-  <img src="docs/screenshots/phone.jpg" width="25%" alt="The dashboard on a phone, in dark mode">
+  <img src="docs/screenshots/phone.jpg" width="25%" alt="The dashboard on a phone">
 </p>
 
 <sub>Screenshots come from the built-in demo (`wifi-heatmap serve --demo`): a made-up campus with made-up

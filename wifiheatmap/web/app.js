@@ -54,7 +54,7 @@ async function api(path, opts = {}) {
 function barsIcon(n) {
   const svg = s("svg", { viewBox: "0 0 16 14", class: "bars", "aria-hidden": "true" });
   [4, 7, 10, 13].forEach((ht, i) => {
-    const r = s("rect", { x: i * 4, y: 14 - ht, width: 3, height: ht, rx: 1 });
+    const r = s("rect", { x: i * 4, y: 14 - ht, width: 3, height: ht });
     if (i >= n) r.setAttribute("class", "off"); else r.setAttribute("fill", "currentColor");
     svg.append(r);
   });
@@ -68,6 +68,15 @@ function chip(label) {
   const k = KEY[label] || "none";
   return h("span", { class: "chip s-" + k }, barsIcon(BARS[k]), h("span", null, label));
 }
+/** Ten-segment meter for a 0-100 score part (null: empty, and hidden from screen readers). */
+function segMeter(v, label) {
+  const n = v == null ? 0 : Math.round(v / 10);
+  const m = h("span", v == null ? { class: "seg", "aria-hidden": "true" }
+    : { class: "seg", role: "meter", "aria-label": label, "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": Math.round(v) });
+  for (let i = 0; i < 10; i++) m.append(h("i", { class: i < n ? "on" : null }));
+  return m;
+}
+const WEAK = 50;   // a part under this is called out (score.py uses the same cut for "why")
 const fmt = {
   dbm: (v) => (v == null ? "—" : Math.round(v) + " dBm"),
   ms: (v) => (v == null ? "—" : Math.round(v) + " ms"),
@@ -184,11 +193,14 @@ function tipOn(el, title, lines) {
 function render() {
   const ranked = S.places.filter((p) => p.score != null);
   const best = S.best.map(byId), dead = S.dead.map(byId);
-  $("eyebrow").textContent = S.demo ? "wifi-heatmap · demo" : "wifi-heatmap";
+  $("eyebrow").textContent = S.demo ? "Demo data / Unit WH-01" : "Unit WH-01";
   setBot(...botMood());
-  $("headline").textContent = !S.places.length ? "No places yet"
-    : best.length ? "Best spot: " + best[0].name
-    : ranked.length ? "No great spot yet" : "Not enough data yet";
+  const spot = best[0] || ranked[0] || null;
+  $("hero-label").textContent = best.length ? "Best spot" : ranked.length ? "Top ranked · no best spot yet" : "Status";
+  $("headline").textContent = spot ? spot.name : !S.places.length ? "No places yet" : "Not enough data";
+  $("hero-score").textContent = spot ? spot.score : "--";
+  $("hero-chip").replaceChildren(spot ? chip(spot.label) : "");
+  renderMetrics(spot);
   const bits = [];
   if (S.places.length) bits.push(ranked.length + " of " + S.places.length + " places ranked");
   if (dead.length) bits.push(dead.length + " dead zone" + (dead.length === 1 ? "" : "s") + " (" + dead.map((p) => p.name).join(", ") + ")");
@@ -208,6 +220,30 @@ function render() {
   renderMap();
   renderTable();
   if (openId && $("detail").open) loadDetail(openId, true);
+}
+
+// The hero spot's four measurements, each with its score part as a meter; weak parts are flagged in red.
+const METRICS = [
+  ["signal", "Signal", (p) => p.rssi == null ? null : [Math.round(p.rssi), "dBm"]],
+  ["latency", "p90 ping", (p) => p.ping_p90 == null ? null : [Math.round(p.ping_p90), "ms"]],
+  ["loss", "Loss", (p) => p.loss == null ? null : [fmt.pct(p.loss).slice(0, -1), "%"]],
+  ["speed", "Download", (p) => p.dl_mbps == null ? null : [p.dl_mbps < 10 ? p.dl_mbps.toFixed(1) : Math.round(p.dl_mbps), "Mbit/s"]],
+];
+function renderMetrics(spot) {
+  $("metrics").replaceChildren(...METRICS.map(([k, name, val], i) => {
+    const v = spot ? spot.parts[k] : null;
+    const x = spot ? val(spot) : null;
+    const weak = v != null && v < WEAK;
+    const foot = !spot ? "Awaiting data" : v != null ? "Part " + Math.round(v) + " / 100"
+      : k === "speed" ? "No speed test · not in score" : "No data";
+    return h("div", { class: "metric" + (weak ? " weak" : "") },
+      h("div", { class: "m-head" }, h("span", { class: "label" }, String(i + 1).padStart(2, "0") + " / " + name),
+        weak ? h("span", { class: "flag" }, "▲ Weak") : null),
+      x ? h("data", { class: "m-val", value: x[0] }, x[0], h("small", null, x[1]))
+        : h("div", { class: "m-val none" }, spot && k === "speed" ? "No test" : "—"),
+      segMeter(v, name + " score"),
+      h("div", { class: "m-foot" }, foot));
+  }));
 }
 
 function renderLive() {
@@ -297,7 +333,7 @@ function renderTable() {
   const ranked = S.places.filter((p) => p.score != null);
   const waiting = S.places.filter((p) => p.score == null);
   tbody.replaceChildren(...ranked.map((p, i) => h("tr", null,
-    h("td", { class: "rank" }, i + 1),
+    h("td", { class: "rank" }, String(i + 1).padStart(2, "0")),
     h("td", null, h("button", { class: "link", type: "button", onclick: () => openDetail(p.id) }, p.name)),
     h("td", null, h("div", { class: "score-cell" }, h("strong", null, p.score), chip(p.label))),
     h("td", { class: "num" }, fmt.dbm(p.rssi)),
@@ -314,7 +350,7 @@ function renderTable() {
     : "No places yet. Press Check in, or run: wifi-heatmap log --place \"Library L2\"";
   const w = $("waiting");
   w.hidden = !waiting.length;
-  w.replaceChildren("Not ranked yet (needs " + S.min_samples + " samples): ",
+  w.replaceChildren(">>> Not ranked yet (needs " + S.min_samples + " samples): ",
     ...waiting.flatMap((p, i) => [i ? ", " : "", h("button", { class: "link", type: "button", onclick: () => openDetail(p.id) }, p.name), " (" + p.samples + ")"]));
 }
 
@@ -347,9 +383,9 @@ async function loadDetail(id, quiet) {
   const parts = d.score != null ? h("div", { class: "parts", role: "list", "aria-label": "Score parts" },
     ...Object.keys(names).map((k) => {
       const v = d.parts[k];
-      return h("div", { class: "part" + (v == null ? " missing" : ""), role: "listitem" },
+      return h("div", { class: "part" + (v == null ? " missing" : v < WEAK ? " weak" : ""), role: "listitem" },
         h("span", { class: "lbl" }, names[k]),
-        h("span", { class: "track" }, v == null ? null : h("span", { class: "fill", style: { width: v + "%" } })),
+        segMeter(v, names[k] + " score"),
         h("span", { class: "val" }, v == null ? "—" : Math.round(v)));
     }),
     d.parts.speed == null ? h("p", { class: "hint" }, "No speed test here yet, so the score uses the other three.") : null) : null;
@@ -407,14 +443,10 @@ function hoursChart(hours) {
     svg.append(hit);
     if (v == null) {
       few = true;
-      svg.append(s("rect", { class: "few", x: x0 + 0.75, y: y(8), width: w - 1.5, height: y(0) - y(8), rx: 2 }));
+      svg.append(s("rect", { class: "few", x: x0 + 0.75, y: y(8), width: w - 1.5, height: y(0) - y(8) }));
     } else {
       const top = y(Math.max(v, 2));
-      // rounded top, square base: a 4px-radius path anchored to the baseline
-      const r = Math.min(4, w / 2, y(0) - top);
-      const d = "M" + x0 + "," + y(0) + "V" + (top + r) + "Q" + x0 + "," + top + " " + (x0 + r) + "," + top
-        + "H" + (x0 + w - r) + "Q" + (x0 + w) + "," + top + " " + (x0 + w) + "," + (top + r) + "V" + y(0) + "Z";
-      svg.append(s("path", { d, class: "b" }));
+      svg.append(s("rect", { class: "b", x: x0, y: top, width: w, height: y(0) - top }));
     }
   }
   wrap.append(svg);
@@ -552,19 +584,6 @@ $("phone-btn").addEventListener("click", async () => {
       h("li", null, "Scan it with the phone's camera. The phone must be on the same Wi-Fi as this Mac."),
       h("li", null, "Campus Wi-Fi often stops devices from reaching each other. If the page won't load, turn on your phone's hotspot and connect this Mac to it, then reopen this to get the new link."),
       h("li", null, "Keep the link private: anyone with it on the same network can see your places and start logging.")));
-});
-
-// ---------- theme
-function setTheme(t) {
-  if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
-  try { if (t) localStorage.setItem("theme", t); else localStorage.removeItem("theme"); } catch (e) { /* private mode */ }
-}
-try { const t = localStorage.getItem("theme"); if (t) setTheme(t); } catch (e) { /* ignore */ }
-$("theme-btn").addEventListener("click", () => {
-  const dark = document.documentElement.dataset.theme
-    ? document.documentElement.dataset.theme === "dark"
-    : matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(dark ? "light" : "dark");
 });
 
 // ---------- polling

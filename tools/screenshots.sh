@@ -23,13 +23,13 @@ document.body.append(row);
 })'
 
 shot() { "$TMP/screenshot" "$URL" "$@"; }
-shot 1200 900 "$TMP/dash-light.png" light
-shot 1200 900 "$TMP/dash-dark.png" dark
-shot 1200 760 "$TMP/detail.png" light "openDetail('cafeteria')"
+shot 1200 900 "$TMP/dash.png" dark
+shot 1200 760 "$TMP/detail.png" dark "openDetail('cafeteria')"
 shot 390 844 "$TMP/phone.png" dark
-shot 760 230 "$TMP/moods.png" light "$MOODS"
+shot 760 230 "$TMP/moods.png" dark "$MOODS"
 mkdir -p "$OUT"
-for f in dash-light dash-dark detail phone; do
+rm -f "$OUT/dash-light.jpg" "$OUT/dash-dark.jpg"   # from before the dashboard went dark-only
+for f in dash detail phone; do
   sips -s format jpeg -s formatOptions 82 "$TMP/$f.png" --out "$OUT/$f.jpg" >/dev/null
 done
 cp "$TMP/moods.png" "$OUT/moods.png"

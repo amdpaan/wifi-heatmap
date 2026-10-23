@@ -3,28 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0a0a">
 <title>wifi-heatmap</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 <script src="/app.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <div class="hero">
-  <span class="bot m-idle lv-0" id="bot" role="img" aria-label="The antenna-bot, wifi-heatmap's mascot"></span>
-  <div class="hero-text">
-    <p class="eyebrow" id="eyebrow">wifi-heatmap</p>
-    <h1 id="headline">Loading…</h1>
-    <p class="sub" id="subtitle"></p>
-  </div>
+<header class="bar">
+  <div class="bar-id">
+    <span class="mark">WIFI-HEATMAP®</span>
+    <span class="dim" id="eyebrow">UNIT WH-01</span>
   </div>
   <div class="actions">
     <button class="btn" id="checkin-btn" type="button">Check in</button>
     <button class="btn ghost" id="phone-btn" type="button" hidden>Phone</button>
-    <button class="icon-btn" id="theme-btn" type="button" aria-label="Switch light/dark mode" title="Light/dark">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-    </button>
   </div>
 </header>
 
@@ -39,6 +33,25 @@
     </div>
     <button class="btn ghost" id="stop-btn" type="button">Stop</button>
   </section>
+
+  <section class="hero" aria-labelledby="headline">
+    <div class="hero-main">
+      <p class="label" id="hero-label">Best spot</p>
+      <h1 id="headline">Loading…</h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <div class="hero-num">
+      <p class="label">Score / 100</p>
+      <output class="giant" id="hero-score">--</output>
+      <div id="hero-chip"></div>
+    </div>
+    <div class="hero-unit">
+      <span class="bot m-idle lv-0" id="bot" role="img" aria-label="The antenna-bot, wifi-heatmap's mascot"></span>
+      <p class="label">Unit AB-01</p>
+    </div>
+  </section>
+
+  <section class="metrics" id="metrics" aria-label="The spot's measurements"></section>
 
   <section class="panel" aria-labelledby="map-title">
     <div class="panel-head">
@@ -56,14 +69,21 @@
       <button class="btn ghost small" id="pin-clear" type="button">Remove pin</button>
       <button class="btn small" id="pin-done" type="button">Done</button>
     </div>
-    <div class="map" id="map" hidden>
-      <img id="map-img" alt="Your map, with a pin for each place coloured by its score">
-      <svg class="heat" id="heat" aria-hidden="true"></svg>
-      <div id="pins"></div>
-    </div>
-    <div class="map-empty" id="map-empty" hidden>
-      <p>No map yet. Upload a campus map or a floor plan (PNG, JPEG or WebP), then drop a pin for each place.</p>
-      <label class="btn" for="map-file">Upload map</label>
+    <div class="stage">
+      <span class="cx tl" aria-hidden="true">+</span><span class="cx tr" aria-hidden="true">+</span>
+      <span class="cx bl" aria-hidden="true">+</span><span class="cx br" aria-hidden="true">+</span>
+      <div class="map" id="map" hidden>
+        <img id="map-img" alt="Your map, with a pin for each place coloured by its score">
+        <svg class="heat" id="heat" aria-hidden="true"></svg>
+        <div id="pins"></div>
+      </div>
+      <div class="map-empty" id="map-empty" hidden>
+        <span class="coord c-tl" aria-hidden="true">X 000 / Y 000</span>
+        <span class="coord c-br" aria-hidden="true">X 100 / Y 100</span>
+        <p class="map-empty-title">[ No map loaded ]</p>
+        <p>Upload a campus map or a floor plan (PNG, JPEG or WebP), then drop a pin for each place.</p>
+        <label class="btn" for="map-file">Upload map</label>
+      </div>
     </div>
     <div class="legend" id="legend"></div>
   </section>
@@ -74,7 +94,7 @@
       <table id="rank-table">
         <thead>
           <tr>
-            <th><span class="sr">Rank</span></th>
+            <th><span class="sr">Rank</span><span aria-hidden="true">#</span></th>
             <th>Place</th>
             <th>Score</th>
             <th class="num">Signal</th>
@@ -90,6 +110,10 @@
     <p class="empty" id="rank-empty" hidden></p>
     <p class="waiting" id="waiting" hidden></p>
   </section>
+
+  <footer class="foot" aria-hidden="true">
+    <span>/// Passive measurement only</span><span>Rev 2.6 · Unit WH-01</span>
+  </footer>
 </main>
 
 <dialog id="detail" aria-labelledby="d-name"><div class="dlg" id="detail-body"></div></dialog>
